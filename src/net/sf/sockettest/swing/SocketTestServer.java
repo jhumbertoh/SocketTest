@@ -55,7 +55,8 @@ public class SocketTestServer extends JPanel /*JFrame*/ {
     private Socket socket;
     private ServerSocket server;
     private SocketServer socketServer;
-    private PrintWriter out;
+    //private PrintWriter out;
+    private OutputStream out;
     
     protected final JFrame parent;
     
@@ -400,7 +401,7 @@ public class SocketTestServer extends JPanel /*JFrame*/ {
             disconnectButton.setEnabled(false);
         } else {
             socket = s;
-            changeBorder(" "+socket.getInetAddress().getHostName()+
+            changeBorder(socket.getInetAddress().getHostName()+
                     " ["+socket.getInetAddress().getHostAddress()+"] ");
             sendButton.setEnabled(true);
             sendField.setEditable(true);
@@ -434,14 +435,23 @@ public class SocketTestServer extends JPanel /*JFrame*/ {
     
     public void sendMessage(String s) {
         setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-        try	{
-            if(out==null) {
+        try{
+            byte[] buffer = s.getBytes();
+            byte[] data = packMessage(buffer);
+            /*if(out==null) {
                 out = new PrintWriter(new BufferedWriter(
                         new OutputStreamWriter(socket.getOutputStream())), true);
             }
-            append("S: "+s);
             out.print(s+NEW_LINE);
             out.flush();
+            */
+            if(out==null) {
+                out = socket.getOutputStream();
+            }
+            append(NEW_LINE+"S: "+s);
+            out.write(data);
+            out.flush();
+            
             sendField.setText("");
             setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
         } catch (Exception e) {
@@ -466,5 +476,18 @@ public class SocketTestServer extends JPanel /*JFrame*/ {
         centerPanel.setBorder(cb);
         invalidate();
         repaint();
+    }
+    
+    private static byte[] packMessage(byte[] buffer){
+            int msgLenght = buffer.length;
+            byte[] data = new byte[msgLenght + getHeaderLenght()];
+            data[0] = (byte)(msgLenght / 256);
+            data[1] = (byte)(msgLenght % 256);
+	    System.arraycopy(buffer, 0, data, getHeaderLenght(), msgLenght);
+            return data;
+    }
+    
+    private static int getHeaderLenght(){
+        return 2;
     }    
 }
